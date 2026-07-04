@@ -88,6 +88,7 @@ class MainWindow(QMainWindow):
         main_layout.addWidget(self.text_links)
         
         add_btn = QPushButton("Add Links to Queue")
+        add_btn.setStyleSheet("background-color: #2e55cc; color: white; font-weight: bold; padding: 6px;")
         add_btn.clicked.connect(self.add_links)
         main_layout.addWidget(add_btn)
         
@@ -320,26 +321,27 @@ class MainWindow(QMainWindow):
                 return
                 
             # Define paths to extractors
-            # Check for bundled 7za.exe (PyInstaller extracts it to sys._MEIPASS in temp dir)
+            # Check for bundled 7z.exe (PyInstaller extracts it to sys._MEIPASS in temp dir)
             if hasattr(sys, '_MEIPASS'):
-                bundled_7z = os.path.join(sys._MEIPASS, '7za.exe')
+                bundled_7z = os.path.join(sys._MEIPASS, '7z.exe')
             else:
-                bundled_7z = os.path.join(os.path.dirname(os.path.abspath(__file__)), '7za.exe')
+                bundled_7z = os.path.join(os.path.dirname(os.path.abspath(__file__)), '7z.exe')
                 
             installed_7z = r"C:\Program Files\7-Zip\7z.exe"
             installed_winrar = r"C:\Program Files\WinRAR\WinRAR.exe"
             
             cmd = None
-            if os.path.exists(bundled_7z):
-                cmd = [bundled_7z, 'x', first_vol, f'-o{save_dir}', '-y']
-            elif os.path.exists(installed_7z):
+            # Prioritize full installed 7-Zip because 7za (standalone) often fails on newer multi-volume RARs
+            if os.path.exists(installed_7z):
                 cmd = [installed_7z, 'x', first_vol, f'-o{save_dir}', '-y']
             elif os.path.exists(installed_winrar):
                 cmd = [installed_winrar, 'x', '-y', first_vol, f'{save_dir}\\']
+            elif os.path.exists(bundled_7z):
+                cmd = [bundled_7z, 'x', first_vol, f'-o{save_dir}', '-y']
                 
             if not cmd:
                 for t in tasks_in_folder:
-                    t.status = "Extract Error (Missing 7za.exe)"
+                    t.status = "Extract Error (Missing 7z.exe)"
                 return
                 
             # Run extraction silently without spawning a console window
