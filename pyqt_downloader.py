@@ -319,24 +319,39 @@ class MainWindow(QMainWindow):
                     t.status = "Extract Error (No File)"
                 return
                 
-            # Detect 7z or WinRAR
-            seven_z = r"C:\Program Files\7-Zip\7z.exe"
-            winrar = r"C:\Program Files\WinRAR\WinRAR.exe"
+            # Define paths to extractors
+            # Check for bundled 7za.exe (PyInstaller extracts it to sys._MEIPASS in temp dir)
+            if hasattr(sys, '_MEIPASS'):
+                bundled_7z = os.path.join(sys._MEIPASS, '7za.exe')
+            else:
+                bundled_7z = os.path.join(os.path.dirname(os.path.abspath(__file__)), '7za.exe')
+                
+            installed_7z = r"C:\Program Files\7-Zip\7z.exe"
+            installed_winrar = r"C:\Program Files\WinRAR\WinRAR.exe"
             
             cmd = None
-            if os.path.exists(seven_z):
-                cmd = [seven_z, 'x', first_vol, f'-o{save_dir}', '-y']
-            elif os.path.exists(winrar):
-                cmd = [winrar, 'x', '-y', first_vol, f'{save_dir}\\']
+            if os.path.exists(bundled_7z):
+                cmd = [bundled_7z, 'x', first_vol, f'-o{save_dir}', '-y']
+            elif os.path.exists(installed_7z):
+                cmd = [installed_7z, 'x', first_vol, f'-o{save_dir}', '-y']
+            elif os.path.exists(installed_winrar):
+                cmd = [installed_winrar, 'x', '-y', first_vol, f'{save_dir}\\']
                 
             if not cmd:
                 for t in tasks_in_folder:
-                    t.status = "Extract Error (Install 7z/WinRAR)"
+                    t.status = "Extract Error (Missing 7za.exe)"
                 return
                 
             # Run extraction silently without spawning a console window
             creationflags = 0x08000000 # subprocess.CREATE_NO_WINDOW
-            subprocess.run(cmd, check=True, creationflags=creationflags)
+            subprocess.run(
+                cmd, 
+                check=True, 
+                creationflags=creationflags,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                stdin=subprocess.DEVNULL
+            )
             
             for t in tasks_in_folder:
                 t.status = "Extracted"
